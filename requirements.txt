@@ -1,0 +1,17 @@
+streamlit
+google-generativeai
+python-dotenv
+langchain
+PyPDF2
+faiss-cpu 
+langchain_google_genai
+langchain_community.vectorstores
+pyyaml
+streamlit_authenticator 
+sqlite3
+pandas
+tabula 
+fitz
+PIL
+tempfile
+docx
