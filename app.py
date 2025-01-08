@@ -23,6 +23,15 @@ load_dotenv()
 os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
+
+def extract_text_from_pdf(pdf_file_path):
+    text = ""
+    with open(pdf_file_path, 'rb') as file:
+        pdf_reader = PyPDF2.PdfReader(file)
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+    return text
+
 def get_text_chunks(text):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
     chunks = text_splitter.split_text(text)
@@ -191,6 +200,18 @@ def main():
     st.title("Chat with PDF using Gemini 🤖 ")
     
     if pdf_docs:
+        extracted_texts = [] 
+
+        for pdf in pdf_docs:
+        extracted_text = extract_text_from_pdf(pdf)  
+        extracted_texts.append(extracted_text)
+
+        text_chunks = []
+        for text in extracted_texts:
+            chunks = get_text_chunks(text)  
+            text_chunks.extend(chunks)
+
+        
         if extract_tables_btn:
             st.subheader("Extracted Tables")
             for pdf in pdf_docs:
