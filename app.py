@@ -19,6 +19,9 @@ from docx import Document
 
 st.set_page_config(page_title="Chat PDF with Gemini", page_icon="💬", layout="wide")
 
+load_dotenv()
+os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 def get_text_chunks(text):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
