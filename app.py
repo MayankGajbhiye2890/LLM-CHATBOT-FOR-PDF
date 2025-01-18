@@ -24,14 +24,6 @@ os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 
-def extract_text_from_pdf(pdf_file_path):
-    text = ""
-    with open(pdf_file_path, 'rb') as file:
-        pdf_reader = PyPDF2.PdfReader(file)
-        for page in pdf_reader.pages:
-            text += page.extract_text()
-    return text
-
 def get_text_chunks(text):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
     chunks = text_splitter.split_text(text)
@@ -71,8 +63,26 @@ def get_conversational_chain():
 
 def load_faiss_index():
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    faiss_store = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-    return faiss_store
+    if os.path.exists("faiss_index"):
+        faiss_store = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+        return faiss_store
+    else:
+        return None
+
+def process_and_update_faiss(pdf_docs):
+    # Extract text and create new FAISS index
+    all_text = ""
+    for pdf_file in pdf_docs:
+        pdf_reader = PdfReader(pdf_file)
+        for page in pdf_reader.pages:
+            all_text += page.extract_text()
+
+    if all_text.strip():
+        text_chunks = get_text_chunks(all_text)
+        get_vector_store(text_chunks)
+        # st.success("FAISS index has been updated with the uploaded PDFs.")
+    # else:
+    #     st.error("No text could be extracted from the uploaded PDFs.")
 
 def extract_tables_from_pdf(pdf_file):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
@@ -178,8 +188,7 @@ def save_chat_summary(conversation_history, file_name="conversation.txt"):
 
 
 def main():
-    # st.set_page_config(page_title="Chat PDF with Gemini", page_icon="💬", layout="wide")
-    
+
     with st.sidebar:
         st.title("Menu")
         st.write("Upload your PDF files and process them for a better chat experience.")
@@ -197,21 +206,15 @@ def main():
         extract_images_btn = st.button("Extract Images")
     
     # RESULT GENERATION SECTION
-    st.title("Chat with PDF using Gemini 🤖 ")
+    st.title("Chat with PDF using Gemini 🤖")
     
     if pdf_docs:
-        extracted_texts = [] 
+        process_and_update_faiss(pdf_docs)  # Process and create FAISS index for new PDFs
+        user_question = st.text_input("Ask a Question from the PDF Files", placeholder="Type your question here...")
 
-        for pdf in pdf_docs:
-        extracted_text = extract_text_from_pdf(pdf)  
-        extracted_texts.append(extracted_text)
+        if user_question:
+            user_input(user_question)
 
-        text_chunks = []
-        for text in extracted_texts:
-            chunks = get_text_chunks(text)  
-            text_chunks.extend(chunks)
-
-        
         if extract_tables_btn:
             st.subheader("Extracted Tables")
             for pdf in pdf_docs:
@@ -232,9 +235,6 @@ def main():
                 for page, index, image in image_elements:
                     st.image(image, caption=f"Page {page}, Image {index}")
 
-        user_question = st.text_input("Ask a Question from the PDF Files", placeholder="Type your question here...")
-        if user_question:
-            user_input(user_question)
         
         if st.button("Export Conversation to .txt"):
             if conversation_history:
